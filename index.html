@@ -112,7 +112,10 @@ body.locked .app,body.locked #tip,body.locked .databadge{visibility:hidden}
 .logout{margin-top:8px;font-size:10.5px;color:var(--ink-4);text-decoration:underline;cursor:pointer;background:none;border:0;padding:0}
 .eventbox{background:linear-gradient(120deg,#FBF9FE,#F2EEFB);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:14px;max-width:1180px}
 .eventbox p{margin:5px 0 0;font-size:13px;line-height:1.5;color:var(--ink);max-width:88ch}
-.kpigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px;max-width:1180px}
+.kpigrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:1180px}
+.kpigrid+.kpigrid{margin-top:12px}
+@media (max-width:1000px){.kpigrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:660px){.kpigrid{grid-template-columns:minmax(0,1fr)}}
 .kpi2{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;transition:border-color .16s,box-shadow .16s}
 .kpi2:hover{border-color:var(--brand-2);box-shadow:var(--shadow)}
 .kpi2 .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -489,17 +492,17 @@ const DEFAULT_DATA={
  event:{title:'Ключевое событие отчётного периода',
    text:'Начало бетонирования фундаментов под ОФ. Общая строительная готовность составляет 9,4% (+0,6%). Общая сумма оплат составила 28,4 млрд руб. с НДС (+1,2 млрд руб.).'},
  kpi:[
-  {label:'Утверждённый бюджет',value:'3 221',unit:'Млрд руб. с НДС',delta:'',progress:null,
+  {label:'Утверждённый бюджет',grp:'Финансы',value:'3 221',unit:'Млрд руб. с НДС',delta:'',progress:null,
    tip:'Утверждённый бюджет проекта в текущих ценах, с НДС.'},
-  {label:'Контракты*',value:'685,5',unit:'Млрд руб. с НДС',delta:'+37,3',progress:null,
+  {label:'Контракты*',grp:'Финансы',value:'685,5',unit:'Млрд руб. с НДС',delta:'+37,3',progress:'доля от: Утверждённый бюджет',
    tip:'Сумма заключённых договоров нарастающим итогом.'},
-  {label:'Оплаты*',value:'128,4',unit:'Млрд руб. с НДС',delta:'+13,2',progress:null,
+  {label:'Оплаты*',grp:'Финансы',value:'128,4',unit:'Млрд руб. с НДС',delta:'+13,2',progress:'доля от: Утверждённый бюджет',
    tip:'Оплачено подрядчикам и поставщикам нарастающим итогом.'},
-  {label:'Инжиниринг',value:'99,7%',unit:'Готовность ПД + РД',delta:'+0,25%',progress:99.7,
+  {label:'Инжиниринг',grp:'Ход работ',value:'99,7%',unit:'Готовность ПД + РД',delta:'+0,25%',progress:99.7,
    tip:'Готовность проектной и рабочей документации.'},
-  {label:'Строится',value:'25',unit:'Из 46 объектов',delta:'',progress:54.3,
+  {label:'Строится',grp:'Ход работ',value:'25',unit:'Из 46 объектов',delta:'',progress:54.3,
    tip:'Объектов в активной стадии строительства из общего перечня.'},
-  {label:'Стр. готовность',value:'19,4%',unit:'Onsite + Offsite',delta:'+2,6%',progress:19.4,
+  {label:'Стр. готовность',grp:'Ход работ',value:'19,4%',unit:'Onsite + Offsite',delta:'+2,6%',progress:19.4,
    tip:'Взвешенная строительная готовность площадочных и внеплощадочных объектов.'}
  ],
  fin:{rings:[
@@ -699,12 +702,37 @@ function secHead(sec,extra){
     ${sec.lead?`<p class="one">${esc(sec.lead)}</p>`:''}
     </div>${extra||''}</div>`;
 }
+const parseNum=v=>{const t=String(v??'').replace(/[\s\u00A0]/g,'').replace('%','').replace(',','.').replace(/[^\d.\-]/g,'');
+  const n=parseFloat(t);return isFinite(n)?n:null};
+function kpiProgress(k,all){
+  const raw=k.progress;
+  if(raw===''||raw==null)return null;
+  const s=String(raw).trim();
+  if(!/[а-яё a-z]/i.test(s)){const n=parseNum(s);return n==null?null:{v:Math.max(0,Math.min(100,n))}}
+  const m=s.match(/(?:доля\s*от|%\s*от|от)\s*:?\s*(.+)$/i);
+  if(!m)return null;
+  const norm=x=>String(x).replace(/\*/g,'').replace(/[\s\u00A0]+/g,' ').trim().toLowerCase();
+  const target=(all||[]).find(x=>norm(x.label)===norm(m[1]));
+  if(!target)return null;
+  const base=parseNum(target.value),val=parseNum(k.value);
+  if(!base||val==null)return null;
+  return {v:Math.max(0,Math.min(100,val/base*100)),of:target.label,share:val/base*100};
+}
 function kpiCards(list){
-  return `<div class="kpigrid">`+list.map(k=>`<div class="kpi2" data-tip="${esc(k.tip||'')}" data-lab="${esc(k.label)}">
+  const groups=[];
+  list.forEach(k=>{
+    const g=(k.grp||'').trim();
+    const last=groups[groups.length-1];
+    if(last&&last.name===g)last.items.push(k);else groups.push({name:g,items:[k]});
+  });
+  return groups.map(g=>kpiRow(g.items,list)).join('');
+}
+function kpiRow(list,all){
+  return `<div class="kpigrid">`+list.map(k=>{const _pr=kpiProgress(k,all||list);return `<div class="kpi2" data-tip="${esc(k.tip||'')}" data-lab="${esc(k.label)}"${_pr&&_pr.of?` data-share="${fmt(_pr.share)}% от «${esc(_pr.of)}»"`:''}>
     <div class="top"><span class="lab">${esc(k.label)}</span>${k.delta?`<span class="chip2${String(k.delta).trim().startsWith('-')||String(k.delta).trim().startsWith('−')?' down':''}">${esc(k.delta)}</span>`:''}</div>
     <div class="val"><b class="num">${esc(k.value)}</b><span>${esc(k.unit||'')}</span></div>
-    ${k.progress!=null&&k.progress!==''?`<div class="bar2"><i style="width:${Math.max(0,Math.min(100,+k.progress))}%"></i></div>`:''}
-    </div>`).join('')+`</div>`;
+    ${_pr?`<div class="bar2"><i style="width:${_pr.v.toFixed(1)}%"></i></div>`:''}
+    </div>`}).join('')+`</div>`;
 }
 function ringCards(list){
   const R=28,C=2*Math.PI*R;
@@ -745,8 +773,10 @@ function buildDyn(sec){
   if(sec.note)body+=`<p class="foot">${sec.note}</p>`;
   el.innerHTML=secHead(sec)+body;
   el.querySelectorAll('[data-tip]').forEach(n=>{
-    if(!n.dataset.tip)return;
-    n.onmousemove=e=>showTip(`<b>${esc(n.dataset.lab)}</b>${esc(n.dataset.tip)}`,e);
+    const extra=n.dataset.share||'';
+    if(!n.dataset.tip&&!extra)return;
+    n.onmousemove=e=>showTip(`<b>${esc(n.dataset.lab)}</b>${esc(n.dataset.tip||'')}`
+      +(extra?`<div class="tsep"></div>${row('Доля',extra)}`:''),e);
     n.onmouseleave=hideTip;
   });
   return el;
@@ -1027,7 +1057,7 @@ function applyWorkbook(wb){
   }
   if(rows=sheetRows(wb,SHEETS.kpi)){
     const arr=rows.slice(1).filter(r=>r[0]).map(r=>({label:String(r[0]),value:String(r[1]??''),unit:String(r[2]??''),
-      delta:String(r[3]??''),progress:num(r[4]),tip:String(r[5]??'')}));
+      delta:String(r[3]??''),progress:num(r[4]),tip:String(r[5]??''),grp:String(r[6]??'')}));
     if(arr.length)d.kpi=arr;
   }
   if(rows=sheetRows(wb,SHEETS.rings)){
@@ -1088,7 +1118,7 @@ function applyWorkbook(wb){
         const rr=sheetRows(wb,sec.sheet);
         if(rr&&rr.length){
           if(sec.type==='table')sec.data={cols:rr[0].map(String),rows:rr.slice(1).filter(x=>String(x[0]).trim()).map(x=>rr[0].map((_,i)=>String(x[i]??'')))};
-          if(sec.type==='kpi')sec.data=rr.slice(1).filter(x=>x[0]).map(x=>({label:String(x[0]),value:String(x[1]??''),unit:String(x[2]??''),delta:String(x[3]??''),progress:num(x[4]),tip:String(x[5]??'')}));
+          if(sec.type==='kpi')sec.data=rr.slice(1).filter(x=>x[0]).map(x=>({label:String(x[0]),value:String(x[1]??''),unit:String(x[2]??''),delta:String(x[3]??''),progress:num(x[4]),tip:String(x[5]??''),grp:String(x[6]??'')}));
           if(sec.type==='rings')sec.data=rr.slice(1).filter(x=>x[0]).map(x=>({name:String(x[0]),value:num(x[1])||0,delta:String(x[2]??''),sub:String(x[3]??''),tip:String(x[4]??'')}));
         }
       }
@@ -1247,8 +1277,8 @@ function buildWorkbook(){
     ['offsite_delta',D.offsite.delta,'Прирост offsite за квартал, %']]);
   add(SHEETS.sec,[['id','Раздел (меню)','Подпись','Тип','Заголовок','Лист данных','Показывать','Сноска'],
     ...D.sections.map(s=>[s.id,s.nav,s.sub||'',s.type,s.title||'',s.sheet||'',s.show===false?'нет':'да',s.note||''])]);
-  add(SHEETS.kpi,[['Показатель','Значение','Единица','Дельта','Прогресс %','Пояснение (всплывающее окно)'],
-    ...D.kpi.map(k=>[k.label,k.value,k.unit,k.delta,k.progress??'',k.tip||''])]);
+  add(SHEETS.kpi,[['Показатель','Значение','Единица','Дельта','Прогресс %','Пояснение (всплывающее окно)','Группа'],
+    ...D.kpi.map(k=>[k.label,k.value,k.unit,k.delta,k.progress??'',k.tip||'',k.grp||''])]);
   add(SHEETS.rings,[['Название','%','Дельта','Подпись','Пояснение'],
     ...D.fin.rings.map(r=>[r.name,r.value,r.delta,r.sub,r.tip||''])]);
   add(SHEETS.fin,[['Статья бюджета',...D.fin.cols],...D.fin.rows]);
