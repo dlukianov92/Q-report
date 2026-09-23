@@ -284,9 +284,22 @@ tr.tot td{font-weight:600;background:var(--brand-soft)}
   .offmap{max-height:none}
 }
 @media (max-width:760px){
-  .pin{font-size:10px;padding:2px 7px 2px 2px}
-  .pin .ring{width:19px;height:19px}
+  /* схемы показываются целиком, без прокрутки и без ручного зума */
+  .mapinner{min-width:0;height:auto;aspect-ratio:632/496}
+  #map{height:auto}
+  .mapwrap{overflow:hidden}
+  #offEnergy,#offRoad,#offRoadN,#offRoadS{min-width:0}
+  .roadgrid{min-width:0;grid-template-columns:minmax(0,1fr);gap:14px}
+  .offscroll{overflow:visible}
+  .pin,.offpin{font-size:9px;padding:1px 6px 1px 1px;gap:3px}
+  .pin .ring,.offpin .ring{width:16px;height:16px}
+  .pin .ring circle,.offpin .ring circle{stroke-width:4}
+  .pin .pc,.offpin .pc{font-size:9px}
+  .kmrow{font-size:8.5px;gap:2px}
+  .ohead{font-size:10.5px;padding:4px 8px}
+  .ohead .sub{font-size:9.5px}
   .slidehead h2{font-size:18px}
+  .offmap{max-height:none}
 }
 </style>
 
@@ -478,14 +491,14 @@ const DEFAULT_DATA={
  kpi:[
   {label:'Утверждённый бюджет',value:'3 221',unit:'Млрд руб. с НДС',delta:'',progress:null,
    tip:'Утверждённый бюджет проекта в текущих ценах, с НДС.'},
-  {label:'Инжиниринг',value:'99,7%',unit:'Готовность ПД + РД',delta:'+0,25%',progress:99.7,
-   tip:'Готовность проектной и рабочей документации.'},
   {label:'Контракты*',value:'685,5',unit:'Млрд руб. с НДС',delta:'+37,3',progress:null,
    tip:'Сумма заключённых договоров нарастающим итогом.'},
-  {label:'Строится',value:'25',unit:'Из 46 объектов',delta:'',progress:54.3,
-   tip:'Объектов в активной стадии строительства из общего перечня.'},
   {label:'Оплаты*',value:'128,4',unit:'Млрд руб. с НДС',delta:'+13,2',progress:null,
    tip:'Оплачено подрядчикам и поставщикам нарастающим итогом.'},
+  {label:'Инжиниринг',value:'99,7%',unit:'Готовность ПД + РД',delta:'+0,25%',progress:99.7,
+   tip:'Готовность проектной и рабочей документации.'},
+  {label:'Строится',value:'25',unit:'Из 46 объектов',delta:'',progress:54.3,
+   tip:'Объектов в активной стадии строительства из общего перечня.'},
   {label:'Стр. готовность',value:'19,4%',unit:'Onsite + Offsite',delta:'+2,6%',progress:19.4,
    tip:'Взвешенная строительная готовность площадочных и внеплощадочных объектов.'}
  ],
@@ -503,37 +516,37 @@ const DEFAULT_DATA={
    ['Прочие источники, не включённые в пропорцию**','','','','']]},
  onsite:{total:19.6,delta:'+1,8',
   objects:[
-  {k:'plant',n:'Обогатительная фабрика',v:1.6,pl:9,inc:.6,s:1,e:11,w:34,pin:[848,451],show:1,
+  {k:'plant',n:'Обогатительная фабрика',v:1.6,pl:9,inc:.6,s:1,e:11,w:34,pin:[927,394],show:1,
    tip:'Завершён фундамент корпуса ММС. Поставка металлоконструкций каркаса сдвинута на 11 недель.'},
-  {k:'pit',n:'Карьер «Главный»',v:0,pl:0,inc:0,s:3,e:8,w:12.1,pin:[947,636],show:1,
+  {k:'pit',n:'Карьер «Главный»',v:0,pl:0,inc:0,s:3,e:8,w:12.1,pin:[771,548],show:1,
    tip:'Вскрыша стартует в III кв. 2026 после приёмки внутриплощадочных дорог.'},
-  {k:'pond',n:'Хвостохранилище',v:12,pl:15,inc:2,s:1,e:10,w:7,pin:[505,425],show:1,
+  {k:'pond',n:'Хвостохранилище',v:12,pl:15,inc:2,s:1,e:10,w:7,pin:[519,360],show:1,
    tip:'Снято 1,1 млн м³ грунта из 8,4 млн м³ ложа.'},
-  {k:'dam',n:'Дамба хвостохранилища',v:9,pl:14,inc:1.5,s:1,e:9,w:5,pin:[402,246],show:1,
+  {k:'dam',n:'Дамба хвостохранилища',v:9,pl:14,inc:1.5,s:1,e:9,w:5,pin:[452,256],show:1,
    tip:'Отсыпка первичной дамбы: 96 тыс. м³ из 1,06 млн м³.'},
-  {k:'village',n:'Вахтовый посёлок, 5000 мест',v:82,pl:78,inc:4,s:0,e:4,w:6.9,pin:[932,330],show:1,
+  {k:'village',n:'Вахтовый посёлок, 5000 мест',v:82,pl:78,inc:4,s:0,e:4,w:6.9,pin:[920,230],show:1,
    tip:'Сдано 8 общежитий из 11, столовая на 1200 мест — в отделке.'},
-  {k:'fleet',n:'Комплекс обслуживания горной техники',v:31,pl:30,inc:3,s:0,e:6,w:2.5,pin:[690,447],show:1,
+  {k:'fleet',n:'Комплекс обслуживания горной техники',v:31,pl:30,inc:3,s:0,e:6,w:2.5,pin:[809,478],show:1,
    tip:'Каркас ремонтного бокса собран, идёт монтаж ограждающих конструкций.'},
-  {k:'fleet2',n:'Объект рядом с комплексом ГТ — уточнить',v:0,pl:0,inc:0,s:2,e:7,w:0.8,pin:[905,548],show:1,
+  {k:'fleet2',n:'Объект рядом с комплексом ГТ — уточнить',v:0,pl:0,inc:0,s:2,e:7,w:0.8,pin:[871,464],show:1,
    tip:'Разделён с комплексом обслуживания. Название и показатели — уточнить в Excel.'},
-  {k:'fleet3',n:'Склад у комплекса ГТ — уточнить',v:0,pl:0,inc:0,s:2,e:7,w:0.7,pin:[700,560],show:1,
+  {k:'fleet3',n:'Склад у комплекса ГТ — уточнить',v:0,pl:0,inc:0,s:2,e:7,w:0.7,pin:[762,484],show:1,
    tip:'Разделён с комплексом обслуживания. Название и показатели — уточнить в Excel.'},
-  {k:'substation',n:'ПС 330/10 кВ',v:18,pl:22,inc:2,s:1,e:7,w:3,pin:[752,400],show:1,
+  {k:'substation',n:'ПС 330/10 кВ',v:18,pl:22,inc:2,s:1,e:7,w:3,pin:[796,394],show:1,
    tip:'Фундаменты под трансформаторы готовы, ожидание техусловий.'},
-  {k:'power_line',n:'ВЛ 330 кВ',v:24,pl:21,inc:3,s:0,e:6,w:4,pin:[686,290],show:1,
+  {k:'power_line',n:'ВЛ 330 кВ',v:24,pl:21,inc:3,s:0,e:6,w:4,pin:[752,262],show:1,
    tip:'Установлено 38 опор из 164, смонтировано 9 км провода.'},
-  {k:'south_road',n:'Южная автодорога',v:46,pl:44,inc:4,s:0,e:5,w:6,pin:[690,172],show:1,
+  {k:'south_road',n:'Южная автодорога',v:46,pl:44,inc:4,s:0,e:5,w:6,pin:[813,262],show:1,
    tip:'Земполотно 18 км из 24 км, устройство основания — 9 км.'},
-  {k:'roads',n:'Внутриплощадочные дороги',v:38,pl:40,inc:3.5,s:0,e:9,w:5,pin:[430,545],show:1,
+  {k:'roads',n:'Внутриплощадочные дороги',v:38,pl:40,inc:3.5,s:0,e:9,w:5,pin:[663,374],show:1,
    tip:'Технологические проезды к ОФ и дамбе открыты.'},
-  {k:'intake',n:'Водозабор, 1 очередь',v:100,pl:100,inc:8,s:0,e:2,w:3,pin:[511,587],show:1,
+  {k:'intake',n:'Водозабор, 1 очередь',v:100,pl:100,inc:8,s:0,e:2,w:3,pin:[608,600],show:1,
    tip:'Принят рабочей комиссией 17.05.2026.'},
-  {k:'explosives',n:'Склад ВВ',v:0,pl:0,inc:0,s:5,e:8,w:3,pin:[708,636],show:1,
+  {k:'explosives',n:'Склад ВВ',v:0,pl:0,inc:0,s:5,e:8,w:3,pin:[665,578],show:1,
    tip:'Начало работ — I кв. 2027, после разрешения Ростехнадзора.'},
-  {k:'retaining',n:'Подпорная стена',v:0,pl:0,inc:0,s:4,e:7,w:4,pin:[941,578],show:1,
+  {k:'retaining',n:'Подпорная стена',v:0,pl:0,inc:0,s:4,e:7,w:4,pin:[934,470],show:1,
    tip:'Проект в экспертизе, выход на площадку — IV кв. 2026.'},
-  {k:'gate',n:'Главный въезд и КПП',v:58,pl:55,inc:5,s:0,e:3,w:3,pin:[812,200],show:1,
+  {k:'gate',n:'Главный въезд и КПП',v:58,pl:55,inc:5,s:0,e:3,w:3,pin:[744,194],show:1,
    tip:'Здание КПП под крышей, монтаж систем контроля доступа — июль 2026.'}
  ]},
  offsite:{total:18.6,delta:'+4,4',
@@ -819,6 +832,7 @@ function mapTip(o){
     +(o.tip?`<div class="tsep"></div><div class="note2">${esc(o.tip)}</div>`:'');
 }
 function drawLead(o){
+  return; /* выноски отключены — плашка стоит рядом с объектом */
   const leads=mapSvg.querySelector('#leads');if(!leads)return;
   let ln=LEAD[o.k];
   const c=CENTER[o.k];
