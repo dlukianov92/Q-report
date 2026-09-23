@@ -1109,27 +1109,43 @@ function applyData(nd,label){
   renderOff();
   S.q=Math.min(QNOW(),QS().length-1);
   setQ(S.q);go(Math.min(S.slide,SEC.length-1));
-  if(label){const b=$('dataBadge');b.hidden=false;b.textContent=label}
+  if(label)showBadge(label);
+}
+function showBadge(text){
+  const b=$('dataBadge');if(!b)return;
+  b.hidden=false;b.textContent=text;
+  b.title='Откуда страница взяла данные. Если написано «встроенные», файл рядом со страницей не найден или не прочитан.';
 }
 async function tryLoadExternal(){
-  // 1) data.json — работает без интернета и без библиотек
+  const v='?v='+Date.now();                      // обход кэша GitHub Pages / браузера
+  // 1) data.xlsx — основной источник: обновляете Excel, сайт сразу его показывает
+  if(typeof XLSX!=='undefined'){
+    try{
+      const res=await fetch('data.xlsx'+v,{cache:'no-store'});
+      if(res.ok){
+        const buf=await res.arrayBuffer();
+        if(buf.byteLength>100){
+          applyData(applyWorkbook(XLSX.read(buf,{type:'array'})),'данные: data.xlsx');
+          return true;
+        }
+      }
+    }catch(e){}
+  }
+  // 2) data.json — резерв: если Excel нет или не удалось прочитать (например, закрыт доступ к CDN)
   try{
-    const res=await fetch('data.json',{cache:'no-store'});
+    const res=await fetch('data.json'+v,{cache:'no-store'});
     if(res.ok){
       const j=await res.json();
-      if(j&&j.onsite){applyData(j,'данные: data.json');return true}
+      if(j&&j.onsite){
+        applyData(j,'данные: data.json'+(typeof XLSX==='undefined'?' · Excel не прочитан':''));
+        return true;
+      }
     }
   }catch(e){}
-  // 2) data.xlsx — читается напрямую, если загрузилась библиотека чтения Excel
-  if(typeof XLSX==='undefined')return false;
-  try{
-    const res=await fetch('data.xlsx',{cache:'no-store'});
-    if(!res.ok)return false;
-    const buf=await res.arrayBuffer();
-    if(buf.byteLength<100)return false;
-    applyData(applyWorkbook(XLSX.read(buf,{type:'array'})),'данные: data.xlsx');
-    return true;
-  }catch(e){return false}
+  showBadge(typeof XLSX==='undefined'
+    ? 'встроенные данные · файл Excel не прочитан'
+    : 'встроенные данные · data.xlsx и data.json не найдены');
+  return false;
 }
 function download(name,content,type){
   try{
